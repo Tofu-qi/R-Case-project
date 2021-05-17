@@ -1,0 +1,283 @@
+---
+title: "Case1-NBA Fan Engagement"
+output: html_notebook
+---
+```{r}
+# Title: Case1-NBA Fan Engagement
+#  NAME: Qi Yang
+#  Date: Jan 20 2021
+```
+
+```{r}
+Sys.setlocale('LC_ALL','C')
+
+```
+
+```{r}
+# set working directory
+setwd("~/Downloads/R/hult_NLP_student/cases/NBA Fan Engagement/data")
+```
+
+```{r}
+# Load the following libraries ggplot2, ggthemes stringi, and tm
+library(ggplot2)
+library(ggthemes)
+library(stringi)
+library(tm)
+```
+
+```{r}
+# load the data
+text <- read.csv('A_Oct2019.csv')
+text <- read.csv('B_Nov2019.csv')
+text <- read.csv('C_Dec2019.csv')
+text <- read.csv('D_Jan2020.csv')
+text <- read.csv('E_Feb2020.csv')
+text <- read.csv('F_Mar2020.csv')
+text <- read.csv('G_Apr2020.csv')
+text <- read.csv('H_May2020.csv')
+text <- read.csv('I_June2020.csv')
+text <- read.csv('J_July2020.csv')
+text <- read.csv('K_Aug2020.csv')
+text <- read.csv('L_Sep2020.csv')
+text <- read.csv('M_Oct2020.csv')
+```
+
+```{r}
+# Options
+options(stringsAsFactors = FALSE)
+```
+
+```{r}
+# Logical T/F vector that a string appears at least ONCE
+team   <- grepl("team", text$text, ignore.case=TRUE)
+best   <- grepl("best", text$text, ignore.case=TRUE)
+Hawks <- grepl("Hawks", text$text, ignore.case=TRUE)
+Celtics <- grepl("Celtics", text$text, ignore.case=TRUE)
+Nets <- grepl("Nets", text$text, ignore.case=TRUE)
+Knicks <- grepl("Knicks", text$text, ignore.case=TRUE)
+Philadelphia <- grepl("Philadelphia", text$text, ignore.case=TRUE)
+Raptors <- grepl("Raptors", text$text, ignore.case=TRUE)
+Bulls <- grepl("Bulls", text$text, ignore.case=TRUE)
+Cavaliers <- grepl("Cavaliers", text$text, ignore.case=TRUE)
+Pistons <- grepl("Pistons", text$text, ignore.case=TRUE)
+Pacers <- grepl("Pacers", text$text, ignore.case=TRUE)
+Bucks <- grepl("Bucks", text$text, ignore.case=TRUE)
+Hornets <- grepl("Hornets", text$text, ignore.case=TRUE)
+Heat <- grepl("Heat", text$text, ignore.case=TRUE)
+Magic <- grepl("Magic", text$text, ignore.case=TRUE)
+Wizards <- grepl("Wizards", text$text, ignore.case=TRUE)
+Nuggets <- grepl("Nuggets", text$text, ignore.case=TRUE)
+Timberwolves <- grepl("Timberwolves", text$text, ignore.case=TRUE)
+Thunder <- grepl("Thunder", text$text, ignore.case=TRUE)
+Blazers <- grepl("Blazers", text$text, ignore.case=TRUE)
+Jazz <- grepl("Jazz", text$text, ignore.case=TRUE)
+Warriors <- grepl("Warriors", text$text, ignore.case=TRUE)
+Clippers <- grepl("Clippers", text$text, ignore.case=TRUE)
+Lakers <- grepl("Lakers", text$text, ignore.case=TRUE)
+Suns <- grepl("Suns", text$text, ignore.case=TRUE)
+Kings <- grepl("Kings", text$text, ignore.case=TRUE)
+Mavericks <- grepl("Mavericks", text$text, ignore.case=TRUE)
+Rockets <- grepl("Rockets", text$text, ignore.case=TRUE)
+Grizzlies <- grepl("Grizzlies", text$text, ignore.case=TRUE)
+Pelicans <- grepl("Pelicans", text$text, ignore.case=TRUE)
+Spurs <- grepl("Spurs", text$text, ignore.case=TRUE)
+
+```
+
+```{r}
+# Review Logical Output
+head(Hawks,10)
+head(Celtics,10)
+head(Nets,10)
+head(Knicks,10)
+head(Philadelphia,10)
+head(Raptors,10)
+head(Bulls,10)
+head(Cavaliers,10)
+head(Pistons,10)
+head(Pacers,10)
+head(Bucks,10)
+head(Hornets,10)
+head(Heat,10)
+head(Magic,10)
+head(Wizards,10)
+head(Nuggets,10)
+head(Timberwolves,10)
+head(Thunder,10)
+head(Blazers,10)
+head(Jazz,10)
+head(Warriors,10)
+head(Clippers,10)
+head(Lakers,10)
+head(Suns,10)
+head(Kings,10)
+head(Mavericks,10)
+head(Rockets,10)
+head(Grizzlies,10)
+head(Pelicans,10)
+head(Spurs,10)
+
+```
+
+```{r}
+#Find the row positions of a specific word appearing at least ONCE
+grep("the best show", text$text, ignore.case=TRUE)
+grep("the best athlete", text$text, ignore.case=TRUE)
+grep("the best team", text$text, ignore.case=TRUE)
+```
+
+```{r}
+# Grep for indexing
+text[grep('the best show', text$text),2]
+text[grep("the best athlete", text$text),2]
+text[grep("the best team", text$text),2]
+```
+
+```{r}
+# Logical T/F for one word OR another appears at least ONCE
+keywordsOR  <-"show|team|play"
+showTeamPlay <- grepl(keywordsOR, text$text,ignore.case=TRUE)
+head(text$text[showTeamPlay])
+```
+
+```{r}
+# Logical Search AND operator, regular expression
+keywordsAND <- "(?=.*team)(?=.*great)"
+greatTeam     <- grepl(keywordsAND, text$text,perl=TRUE)
+head(text$text[greatTeam])
+```
+
+
+
+```{r}
+# Calculate the % of times among all tweets
+sum(team) / nrow(text)
+sum(best) / nrow(text)
+sum(showTeamPlay) / nrow(text)
+
+```
+
+```{r}
+tryTolower <- function(x){
+  y = NA
+  try_error = tryCatch(tolower(x), error = function(e) e)
+  if (!inherits(try_error, 'error'))
+    y = tolower(x)
+  return(y)
+}
+```
+
+```{r}
+cleanCorpus<-function(corpus, customStopwords){
+  corpus <- tm_map(corpus, content_transformer(qdapRegex::rm_url))
+  corpus <- tm_map(corpus, content_transformer(replace_contraction)) 
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, stripWhitespace)
+  corpus <- tm_map(corpus, content_transformer(tryTolower))
+  corpus <- tm_map(corpus, removeWords, customStopwords)
+  return(corpus)
+}
+```
+
+```{r}
+# Create custom stop words
+stops <- c(stopwords('SMART'), 'team','best', 'great', 'play',
+                     'show', 'like')
+```
+
+```{r}
+# Read in multiple files as individuals
+txtFiles <- list.files(pattern = 'best|team')
+
+for (i in 1:length(txtFiles)){
+  assign(txtFiles[i], read.csv(txtFiles[i]))
+  cat(paste('read completed:',txtFiles[i],'\n'))
+}
+
+```
+
+```{r}
+# Vector Corpus
+best       <- VCorpus(VectorSource(best.csv$text))
+team <- VCorpus(VectorSource(team.csv$text))
+```
+
+```{r}
+# Clean up the data
+best       <- cleanCorpus(best, stops)
+team <- cleanCorpus(team, stops)
+```
+
+```{r}
+# FYI
+length(best)
+
+```
+
+```{r}
+best       <- paste(best, collapse = ' ')
+team <- paste(team, collapse = ' ')
+
+```
+
+```{r}
+allTeams <- c(best, chardonnay)
+allTeams <- VCorpus((VectorSource(allTeams)))
+
+```
+
+```{r}
+ctrl      <- list(weighting = weightTfIdf)
+teamTDM  <- TermDocumentMatrix(allTeams, control = ctrl)
+teamTDMm <- as.matrix(teamTDM)
+```
+
+```{r}
+colnames(teamTDMm) <- c('best', 'team')
+```
+
+```{r}
+head(teamTDMm)
+```
+
+```{r}
+# Make comparison cloud
+comparison.cloud(teamTDMm, 
+                 max.words=75, 
+                 random.order=FALSE,
+                 title.size=0.5,
+                 colors=brewer.pal(ncol(teamTDMm),"Dark2"),
+                 scale=c(3,0.1))
+```
+
+
+```{r}
+# Chg to factor for ggplot
+text$text <- factor(text$text, 
+                        levels=unique(as.character(text$text))) 
+
+ggplot(team, aes(x=word, y=frequency)) + 
+  geom_bar(stat="identity", fill='darkred') + 
+  coord_flip()+ theme_gdocs() +
+  geom_text(aes(label=frequency), colour="white",hjust=1.25, size=3.0)
+
+```
+
+
+
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
