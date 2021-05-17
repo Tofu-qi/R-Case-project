@@ -1,1 +1,135 @@
+#' Title: NLP HW 1
+#' Purpose: 20pts...where you paying attention?
+#' NAME: Qi Yang
+#' Date: Dec 29 2020
+#' 
 
+# To limit errors please run this code
+Sys.setlocale('LC_ALL','C')
+
+#### 1PT
+# set your working directory
+setwd("~/Downloads/R/hult_NLP_student/HW/Hw1")
+
+# Load the following libraries ggplot2, ggthemes stringi, and tm
+library(ggplot2)
+library(ggthemes)
+library(stringi)
+library(tm)
+
+# load the homework data in an object called `text`
+text <- read.csv('Dec292020Tweets.csv')
+
+#### 1PT
+# 
+# Examine the first 10 rows of data
+head(text,10)
+
+# Print the column names to console. 
+colnames(text)
+
+# What is the first tweet text? 
+# Answer:
+text$text[1]
+# What are the dimension (number of rows and columns)? Use a function. Hint dim(),nrow(), ncol() could all help you
+# Answer:
+dim(text)
+#### 1PT
+# Find out what rows have "virus" in the $text column, ignoring the case, in an object called idx
+idx=grep("virus",text$text, ignore.case=T)
+
+# What is the length of idx?
+# Answer:576 
+length(idx)
+
+# What is the tenth text mentioning "virus"
+# Answer:
+text$text[idx[10]]
+#### 1PT
+# Use grepl to make idx  for 'virus', ignoring case
+idx=grepl('virus', text$text, ignore.case = T)
+
+# Now what is the length of idx?
+length(idx)
+# Answer: 10000 
+
+
+# As a percent, how many tweets mention "virus" among all tweets?
+# Answer: 5.76%
+sum(idx)*100/10000
+#### 5 PTs
+# Write a function accepting a text column
+# use gsub subsituting 'http\\S+\\s*' for '' which removes URLS
+# use gsub substituting '(RT|via)((?:\\b\\W*@\\w+)+)' for '' which removes "RT" exactly
+# use tolower in the function on the text
+# return the changed text
+basicSubs <- function(x){
+  x <- gsub('http\\S+\\s*', '', x)
+  x <- gsub('(RT|via)((?:\\b\\W*@\\w+)+)', '', x)
+  x <- tolower(x)
+  return(x)
+}
+
+# apply the function to JUST THE TEXT COLUMN to  a new object txt
+txt=cbind(basicSubs(text$text),text[,-1])
+colnames(txt)=c("text",colnames(txt)[2:16])
+
+#### 3 PTs
+# Use sum with stri_count on the newt txt object
+# with "trump", "biden" and in the last one check for "virus" OR "vaccine"
+trump  <- sum(stri_count(txt$text, fixed ='trump'))
+biden  <- sum(stri_count(txt$text, fixed ='biden'))
+vterms <- sum(stri_count(txt$text, regex ='virus|vaccine'))
+
+# Organize term objects into a data frame
+termFreq <- data.frame(terms = c('trump','biden','vterms'),
+                       freq  = c(trump,biden, vterms))
+
+# Examine
+termFreq
+
+# Plot it with ggplot2 by filling in the correct data, adding a layers "theme_gdocs() + theme(legend.position = "none")"
+ggplot(termFreq, aes(x = reorder(terms, freq), y = freq,fill=freq)) + 
+  geom_bar(stat = "identity") + coord_flip() + 
+  theme_gdocs() + theme(legend.position = "none")
+
+#### 8 PTs
+# Create some stopwords using the 'SMART' lexicon and add 'rofl'
+stops <- c(stopwords('SMART'), 'rofl')
+
+# Create a Clean Corpus Function
+# add into the function removePunctuation
+# add into the function removeNumbers
+# add into the function stripWhitespace
+cleanCorpus<-function(corpus, customStopwords){
+  corpus <- tm_map(corpus, content_transformer(qdapRegex::rm_url)) 
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, customStopwords)
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus,  stripWhitespace)
+  return(corpus)
+}
+
+# Apply the VCorpus Function to a VectorSource of the original text object
+# Hint: only pass in the vector NOT the entire dataframe using a $
+cleanTxt <- VCorpus(VectorSource(text$text))
+
+# Clean the Corpus with your cleanCorpus function, this will take a few seconds
+cleanTxt <- cleanCorpus(cleanTxt, stops)
+
+# Construct a DTM in an object called cleanMat
+cleanmat  <- DocumentTermMatrix(cleanTxt)
+# Switch this to a simple matrix still called cleanMat
+cleanmat <- as.matrix(cleanmat)
+
+# What are the dimensions of this matrix
+dim(cleanmat)
+
+# What do rows represent in this matrix?
+# Answer: 10000 
+
+# How many unique words exist in the matrix?
+# Answer: 12123
+
+# End
